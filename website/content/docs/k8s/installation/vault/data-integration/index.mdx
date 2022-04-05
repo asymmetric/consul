@@ -63,6 +63,11 @@ It includes things like terminating gateways, ingress gateways, etc.)
 |[Consul Server TLS credentials](/docs/k8s/installation/vault/data-integration/server-tls) | Consul servers<br/>Consul clients<br/>Consul components | [`global.secretsBackend.vault.consulServerRole`](/docs/k8s/helm#v-global-secretsbackend-vault-consulserverrole)<br/>[`global.secretsBackend.vault.consulClientRole`](/docs/k8s/helm#v-global-secretsbackend-vault-consulclientrole)<br/>[`global.secretsBackend.vault.consulCARole`](/docs/k8s/helm#v-global-secretsbackend-vault-consulcarole)|
 |[Service Mesh and Consul client TLS credentials](/docs/k8s/installation/vault/data-integration/connect-ca) | Consul servers | [`global.secretsBackend.vault.consulServerRole`](/docs/k8s/helm#v-global-secretsbackend-vault-consulserverrole)|
 
+-> Note In secondary datacenters, the following secrets to service account mappings will need to be made:
+| Secret | Service Account For | Configurable Role in Consul k8s Helm |
+| ------ | ------------------- | ------------------------------------ |
+|[ACL Replication token](/docs/k8s/installation/vault/data-integration/replication-token) | Consul servers | [`global.secretsBackend.vault.consulServerRole`](/docs/k8s/helm#v-global-secretsbackend-vault-consulserverrole)|
+
 ### Combining policies within roles
 As you can see in the table above, depending upon your needs, a Consul on Kubernetes service account could have the need to request more than one secret.  In these cases, you will want to create one role for the Consul on Kubernetes service account that is mapped to multiple policies, each of which allows it access to a given secret.  
 
