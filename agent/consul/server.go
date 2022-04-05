@@ -39,6 +39,7 @@ import (
 	"github.com/hashicorp/consul/agent/consul/authmethod/ssoauth"
 	"github.com/hashicorp/consul/agent/consul/fsm"
 	"github.com/hashicorp/consul/agent/consul/state"
+	"github.com/hashicorp/consul/agent/consul/stream"
 	"github.com/hashicorp/consul/agent/consul/usagemetrics"
 	"github.com/hashicorp/consul/agent/consul/wanfed"
 	agentgrpc "github.com/hashicorp/consul/agent/grpc/private"
@@ -343,6 +344,12 @@ type Server struct {
 	// Manager to handle starting/stopping go routines when establishing/revoking raft leadership
 	leaderRoutineManager *routine.Manager
 
+	// publisher is the EventPublisher to be shared amongst various server components. Events from
+	// modifications to the FSM, autopilot and others will flow through here. If in the future we
+	// need Events generated outside of the Server and all its components, then we could move
+	// this into the Deps struct and created it much earlier on.
+	publisher *stream.EventPublisher
+
 	// embedded struct to hold all the enterprise specific data
 	EnterpriseServer
 }
@@ -380,6 +387,9 @@ func NewServer(config *Config, flat Deps, publicGRPCServer *grpc.Server) (*Serve
 	loggers := newLoggerStore(serverLogger)
 
 	recorder := middleware.NewRequestRecorder(serverLogger)
+
+	eventPublisher := stream.NewEventPublisher(10 * time.Second)
+
 	// Create server.
 	s := &Server{
 		config:       config,
@@ -406,8 +416,11 @@ func NewServer(config *Config, flat Deps, publicGRPCServer *grpc.Server) (*Serve
 		shutdownCh:              shutdownCh,
 		leaderRoutineManager:    routine.NewManager(logger.Named(logging.Leader)),
 		aclAuthMethodValidators: authmethod.NewCache(),
-		fsm:                     newFSMFromConfig(flat.Logger, gc, config),
+		fsm:                     newFSMFromConfig(flat.Logger, gc, config, eventPublisher),
+		publisher:               eventPublisher,
 	}
+
+	go s.publisher.Run(&lib.StopChannelContext{StopCh: s.shutdownCh})
 
 	if s.config.ConnectMeshGatewayWANFederationEnabled {
 		s.gatewayLocator = NewGatewayLocator(
@@ -664,18 +677,15 @@ func NewServer(config *Config, flat Deps, publicGRPCServer *grpc.Server) (*Serve
 	return s, nil
 }
 
-func newFSMFromConfig(logger hclog.Logger, gc *state.TombstoneGC, config *Config) *fsm.FSM {
-	deps := fsm.Deps{Logger: logger}
-	if config.RPCConfig.EnableStreaming {
-		deps.NewStateStore = func() *state.Store {
-			return state.NewStateStoreWithEventPublisher(gc)
-		}
-		return fsm.NewFromDeps(deps)
+func newFSMFromConfig(logger hclog.Logger, gc *state.TombstoneGC, config *Config, publisher *stream.EventPublisher) *fsm.FSM {
+	deps := fsm.Deps{
+		Logger: logger,
+		NewStateStore: func() *state.Store {
+			return state.NewStateStoreWithEventPublisher(gc, publisher)
+		},
+		Publisher: publisher,
 	}
 
-	deps.NewStateStore = func() *state.Store {
-		return state.NewStateStore(gc)
-	}
 	return fsm.NewFromDeps(deps)
 }
 
