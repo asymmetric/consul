@@ -8,14 +8,11 @@ description: >-
 # Wan Federation with Vault as Secrets Backend
 
 ## Overview
-TODO:  DESCRIBE WHAT WE RAE DOING IN THIS END TO END EXAMPLE
+This guide is an end to end tutorial on setting up WAN Federation with Vault as the secrets backend.  In this tutorial, we will create two clusters `dc1` and `dc2`. dc1 will act as the primary Consul cluster and will also contain the Vault server installation.  dc2 will be the seconday Consul cluster.
+
+This guide will follow the outline provided in the [Systems Integration](/docs/website/content/docs/k8s/installation/vault/systems-integration) and [Data Integration](/docs/website/content/docs/k8s/installation/vault/data-integration) sections of the [Vault as a Secrets Backend](/docs/website/content/docs/k8s/installation/vault) area of the Consul on Kubernetes documentation.
 
 ## Prerequisites
-TODO:  WRAP THIS INTO THE ABOVE DESCRIPTION DESCRIBING THE ENVIRONMENT
-
-- Two Kuberentes clusters (one for each datacenter)
-- Kubernetes distribution must support load balancer services (NOTE: it's possible to make it work without load balancers, but these instructions use load balancers for simplicity).
-
 ### Pre-existing Vault installation in dc1
 
 In this setup, you will deploy Vault server in the dc1 k8s which is also the primary Consul datacenter. You will configure our Vault Helm installation in the dc2 k8s cluster to use it as an external server. This way there will be a single vault server cluster that will be use by both Consul datacenters.
@@ -586,6 +583,10 @@ export MESH_GW_HOST=$(kubectl get svc consul-mesh-gateway -o jsonpath='{.status.
 ```
 
 ##### Set the Mesh Gateway address from DC1.
+-> Note To configure Vault as the Connect CA in secondary datacenters, you need to make sure that the Root CA path is the same,
+but the intermediate is different for each datacenter. In the `connectCA` Helm configuration for a secondary datacenter,
+you can specify a `intermediatePKIPath` that is, for example, prefixed with the datacenter
+for which this configuration is intended (e.g. `dc2/connect-intermediate`).
 
 <CodeBlockConfig filename="consul-dc2.yaml">
 
@@ -644,10 +645,5 @@ Change your Kubernetes current context to target dc1 and use the above values fi
 $ helm install consul-dc2 -f consul-dc2.yaml hashicorp/consul
 ```
 
-### Secondary Datacenters
-
-To configure Vault as the Connect CA in secondary datacenters, you need to make sure that the Root CA path is the same,
-but the intermediate is different for each datacenter. In the `connectCA` Helm configuration for a secondary datacenter,
-you can specify a `intermediatePKIPath` that is, for example, prefixed with the datacenter
-for which this configuration is intended (e.g. `dc2/connect-intermediate`).
-
+## Next steps
+You have currently set completed this tutorial.  For further detail on specific Consul secrets that are available to be stored in Vault, please checkout the detailed guides in the [Data Integration](/docs/website/content/docs/k8s/installation/vault/data-integration) section of the [Vault as a Secrets Backend](/docs/website/content/docs/k8s/installation/vault) area of the Consul on Kubernetes documentation.
