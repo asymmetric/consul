@@ -535,6 +535,10 @@
                     "path": "k8s/installation/vault/data-integration/connect-ca"
                   }
                 ]
+              },
+              {
+                "title": "WAN Federation",
+                "path": "k8s/installation/vault/wan-federation"
               }
             ]
           },
